@@ -18,9 +18,7 @@ if __name__ == "__main__":
 
     if not is_admin():
         # 请求管理员权限并重启脚本
-        ctypes.windll.shell32.ShellExecuteW(
-            None, "runas", sys.executable, " ".join(sys.argv), None, 1
-        )
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
         sys.exit()
 
     app = QApplication(sys.argv)
@@ -31,10 +29,10 @@ if __name__ == "__main__":
     adapter_names = [adapter["Name"] for adapter in net.adapters]
     window.adapter_combobox.addItems(adapter_names)
     window.adapter_combobox.currentTextChanged.connect(
-        lambda: window.update_ip_ui(net.get_optimized(window.adapter_combobox.currentText())))
+        lambda: window.update_ip_ui(net.get_adapter_info(window.adapter_combobox.currentText())))
     adapter = adapter_names[0]
 
-    window.update_ip_ui(net.get_optimized(adapter))
+    window.update_ip_ui(net.get_adapter_info(adapter))
 
     # IP列表
     iplist = IPList()
@@ -44,7 +42,14 @@ if __name__ == "__main__":
 
     # 查看IP
     window.adapter_button.clicked.connect(
-        lambda: window.update_ip_ui(net.get_optimized(window.adapter_combobox.currentText())))
+        lambda: window.update_ip_ui(net.get_adapter_info(window.adapter_combobox.currentText())))
+
+    # 更改IP
+    window.set_button_ip.clicked.connect(lambda: window.update_status_label(
+        net.change_adapter_ip(window.adapter_combobox.currentText(), window.current_ip())))
+
+    # 启动DHCP
+    window.set_button_dhcp.clicked.connect(lambda: net.up_dhcp(window.adapter_combobox.currentText()))
 
     window.show()
     sys.exit(app.exec())

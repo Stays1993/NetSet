@@ -1,18 +1,12 @@
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QFont
-from PyQt6.QtWidgets import (
-    QApplication,
-    QWidget,
-    QLabel,
-    QComboBox,
-    QLineEdit,
-    QPushButton,
-    QListWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-)
+from PyQt6.QtWidgets import (QApplication, QLabel, QComboBox, QLineEdit, QPushButton, QListWidget, QVBoxLayout,
+                             QHBoxLayout, QMenu, QListView, QMainWindow)
+
+from function import IPList, IpModel
 
 
-class Window(QWidget):
+class Window(QMainWindow):
     def __init__(self):
         super().__init__()
         # self.setGeometry(200, 200, 700, 500)
@@ -75,7 +69,12 @@ class Window(QWidget):
         self.status_label: QLabel = QLabel("")
 
         # IP列表
-        self.ip_list: QListWidget = QListWidget()
+        self.ip_list: QListView = QListView()
+        # 右键菜单
+        # 设置上下文菜单策略为CustomContextMenu，表示需要自定义右键菜单行为（而非使用默认菜单）
+        self.ip_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        # 当用户右键点击列表时，会触发customContextMenuRequested信号。此处将该信号连接到自定义的槽函数self.custom_right_menu，用于动态生成并弹出右键菜单
+        self.ip_list.customContextMenuRequested.connect(self.custom_right_menu)
 
     def _init_layout(self):
         """
@@ -147,16 +146,47 @@ class Window(QWidget):
         hbox.addLayout(right_vbox)
         self.setLayout(hbox)
 
-
-    def update_ip_ui(self, var = (str, str, str, [], str)):
+    def update_ip_ui(self, var=(str, str, str, (), str)):
         """更新IP信息窗口"""
-        print('更新IP信息窗口')
         self.ip_entry.setText(var[0])
-        self.subnet_entry.setText(var[1])
+        self.subnet_entry.setText(str(var[1]))
         self.gateway_entry.setText(var[2])
         self.dns_entry_1.setText(var[3][0] if len(var[3]) > 0 else "")
         self.dns_entry_2.setText(var[3][1] if len(var[3]) > 1 else "")
         self.dhcp_status_label.setText(var[4])
+        print('更新 [%s] IP信息' % self.adapter_combobox.currentText())
+
+    def current_ip(self):
+        """获取IP信息窗口信息"""
+        IPv4Address: str = self.ip_entry.text()
+        SubnetMask: str = self.subnet_entry.text()
+        IPv4DefaultGateway: str = self.gateway_entry.text()
+        DNSServer: tuple = (self.dns_entry_1.text(), self.dns_entry_2.text())
+
+        return IPv4Address, SubnetMask, IPv4DefaultGateway, DNSServer
+
+    def update_status_label(self, info: str):
+        """更新状态标签"""
+        self.status_label.setText(info)
+
+    def custom_right_menu(self, pos):
+        """IP列表右键菜单"""
+        menu = QMenu()
+        opt1 = menu.addAction("新增")
+        opt2 = menu.addAction("删除")
+        opt3 = menu.addAction("修改")
+        opt4 = menu.addAction("排序")
+        action = menu.exec(self.ip_list.mapToGlobal(pos))
+
+        if action == opt1:
+            print("新增")
+        elif action == opt2:
+            print('删除')
+        elif action == opt3:
+            print('修改')
+        elif action == opt4:
+            print('排序')
+
 
 def main_ui():
     import sys
