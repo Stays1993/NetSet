@@ -1,17 +1,19 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QFont
 from PyQt6.QtWidgets import (QApplication, QLabel, QComboBox, QLineEdit, QPushButton, QListWidget, QVBoxLayout,
-                             QHBoxLayout, QMenu, QListView, QMainWindow)
+                             QHBoxLayout, QMenu, QListView, QMainWindow, QWidget, QMessageBox)
 
-from function import IPList, IpModel
+from function import IPList
 
 
-class Window(QMainWindow):
+class Window(QWidget):
     def __init__(self):
         super().__init__()
-        # self.setGeometry(200, 200, 700, 500)
+        self.setGeometry(200, 200, 700, 500)
         self.setWindowTitle("IP地址切换工具")
         self.setWindowIcon(QIcon("images/python.png"))
+
+        self.ipList = IPList()
 
         self._set_font()
         self._init_ui()
@@ -69,12 +71,12 @@ class Window(QMainWindow):
         self.status_label: QLabel = QLabel("")
 
         # IP列表
-        self.ip_list: QListView = QListView()
+        self.ip_list_view: MyListWidget = MyListWidget()
         # 右键菜单
         # 设置上下文菜单策略为CustomContextMenu，表示需要自定义右键菜单行为（而非使用默认菜单）
-        self.ip_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.ip_list_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         # 当用户右键点击列表时，会触发customContextMenuRequested信号。此处将该信号连接到自定义的槽函数self.custom_right_menu，用于动态生成并弹出右键菜单
-        self.ip_list.customContextMenuRequested.connect(self.custom_right_menu)
+        self.ip_list_view.customContextMenuRequested.connect(self.custom_right_menu)
 
     def _init_layout(self):
         """
@@ -138,7 +140,7 @@ class Window(QMainWindow):
 
         # 右边布局
         right_vbox: QVBoxLayout = QVBoxLayout()
-        right_vbox.addWidget(self.ip_list)
+        right_vbox.addWidget(self.ip_list_view)
 
         # 页面布局
         hbox: QHBoxLayout = QHBoxLayout()
@@ -176,7 +178,7 @@ class Window(QMainWindow):
         opt2 = menu.addAction("删除")
         opt3 = menu.addAction("修改")
         opt4 = menu.addAction("排序")
-        action = menu.exec(self.ip_list.mapToGlobal(pos))
+        action = menu.exec(self.ip_list_view.mapToGlobal(pos))
 
         if action == opt1:
             print("新增")
@@ -187,6 +189,17 @@ class Window(QMainWindow):
         elif action == opt4:
             print('排序')
 
+
+class MyListWidget(QListWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setDoubleClickedItem()
+
+    def setDoubleClickedItem(self):
+        self.itemDoubleClicked.connect(self.handleDoubleClickedItem)
+
+    def handleDoubleClickedItem(self, item):
+        QMessageBox.information(self, "双击事件", f"你双击了项目: {item.text()}")
 
 def main_ui():
     import sys

@@ -36,9 +36,10 @@ if __name__ == "__main__":
 
     # IP列表
     iplist = IPList()
-    window.ip_list.addItems(iplist.ip_dict)
-    window.ip_list.currentTextChanged.connect(
-        lambda: window.update_ip_ui(iplist.view_ip(window.ip_list.currentItem().text())))
+
+    window.ip_list_view.addItems(iplist.ip_dict)
+    # window.ip_list_view.currentTextChanged.connect(
+    #     lambda: window.update_ip_ui(iplist.view_ip(window.ip_list_view.currentItem().text())))
 
     # 查看IP
     window.adapter_button.clicked.connect(
