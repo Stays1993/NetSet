@@ -42,6 +42,7 @@ class Window(QWidget):
         # 网卡下拉框
         self.adapter_label: QLabel = QLabel("选择网卡:")
         self.adapter_combobox: QComboBox = QComboBox()
+        self.adapter_button: QPushButton = QPushButton('查看IP')
 
         # IP 地址输入框
         self.ip_label: QLabel = QLabel("IP  地址:")
@@ -89,6 +90,7 @@ class Window(QWidget):
         adapter_layout: QHBoxLayout = QHBoxLayout()
         adapter_layout.addWidget(self.adapter_label)
         adapter_layout.addWidget(self.adapter_combobox)
+        adapter_layout.addWidget(self.adapter_button)
         left_vbox.addLayout(adapter_layout)
 
         # IP 地址输入框布局
@@ -145,6 +147,16 @@ class Window(QWidget):
         hbox.addLayout(right_vbox)
         self.setLayout(hbox)
 
+
+    def update_ip_ui(self, var = (str, str, str, [], str)):
+        """更新IP信息窗口"""
+        print('更新IP信息窗口')
+        self.ip_entry.setText(var[0])
+        self.subnet_entry.setText(var[1])
+        self.gateway_entry.setText(var[2])
+        self.dns_entry_1.setText(var[3][0] if len(var[3]) > 0 else "")
+        self.dns_entry_2.setText(var[3][1] if len(var[3]) > 1 else "")
+        self.dhcp_status_label.setText(var[4])
 
 def main_ui():
     import sys

@@ -1,6 +1,7 @@
 import json
 import subprocess
 from ipaddress import IPv4Network
+from json import JSONDecodeError
 
 
 class NetManage:
@@ -8,17 +9,13 @@ class NetManage:
     
     Attributes:
         adapters (list): 存储网卡适配器信息的列表
-        window: 关联的GUI窗口对象
     """
-    
-    def __init__(self, window=None):
+
+    def __init__(self):
         """初始化网络管理实例
-        
-        Args:
-            window (optional): 关联的GUI窗口对象，默认为None
         """
+        super().__init__()
         self.adapters: list = []  # 网卡适配器信息列表
-        self.window = window      # GUI窗口引用
 
     def get_network_adapters(self):
         """获取活动状态的网络适配器列表
@@ -62,11 +59,12 @@ class NetManage:
             # 增强错误处理：将错误信息传递到GUI界面
             error_msg = f"命令执行失败：{e.output.strip()}"
             print(error_msg)
-            if self.window:
-                self.window.statusBar().showMessage(error_msg, 5000)
+            # if self.window:
+            #     self.window.statusBar().showMessage(error_msg, 5000)
 
-    def get_optimized(self, Name: str):
-        """获取指定网络适配器的优化配置信息
+    @staticmethod
+    def get_optimized(Name: str):
+        """获取指定网络适配器的配置信息
         
         Args:
             Name (str): 网络接口名称（如"以太网"、"WLAN"等）
@@ -124,19 +122,75 @@ class NetManage:
             else:
                 SubnetMask = "255.255.255.255"  # 默认无效掩码
 
-            # 添加类型注解
             IPv4Address: str = output.get('IPv4Address', "")
             IPv4DefaultGateway: str = output.get('IPv4DefaultGateway', '')
             DNSServer: list[str] = output.get('DNSServer', [])
             DHCPEnabled: str = output.get('DHCPEnabled', '')
 
-            self.window.ip_entry.setText(IPv4Address)
-            self.window.subnet_entry.setText(SubnetMask)
-            self.window.gateway_entry.setText(IPv4DefaultGateway)
-            self.window.dns_entry_1.setText(DNSServer[0] if len(DNSServer) > 0 else "")
-            self.window.dns_entry_2.setText(DNSServer[1] if len(DNSServer) > 1 else "")
-            self.window.dhcp_status_label.setText(DHCPEnabled)
+            return IPv4Address, SubnetMask, IPv4DefaultGateway, DNSServer, DHCPEnabled
+        else:
+            return '', '', '', [], ''
+
+
+class IPList:
+    """IP地址"""
+
+    def __init__(self, filename: str = 'record.json'):
+        super().__init__()
+        self.ip_dict: dict = {}
+        self.filename: str = filename
+        self.load_ip()
+
+    def add_ip(self, IPv4Address: str, SubnetMask: str, IPv4DefaultGateway: str, DNSServer: list):
+        """添加IP"""
+        temp = {IPv4Address: {"IPv4Address": IPv4Address, 'SubnetMask': SubnetMask,
+                              'IPv4DefaultGateway': IPv4DefaultGateway, 'DNSServer': DNSServer}}
+        self.ip_dict.update(temp)
+
+    def update_ip(self):
+        """更新IP"""
+
+    def view_ip(self, IPv4Address: str):
+        """查看IP"""
+        if self.ip_dict.get(IPv4Address):
+            ip_data = self.ip_dict.get(IPv4Address)
+
+            IPv4Address: str = ip_data.get('IPv4Address', "")
+            SubnetMask: str = ip_data.get('SubnetMask', '')
+            IPv4DefaultGateway: str = ip_data.get('IPv4DefaultGateway', '')
+            DNSServer: list[str] = ip_data.get('DNSServer', [])
+            DHCPEnabled = ""
 
             return IPv4Address, SubnetMask, IPv4DefaultGateway, DNSServer, DHCPEnabled
         else:
-            return None
+            print('没有 %s' % IPv4Address)
+            return "", "", "", []
+
+    def del_ip(self, IPv4Address: str):
+        """删除IP"""
+        if self.ip_dict.get(IPv4Address):
+            self.ip_dict.pop(IPv4Address)
+            print('已删除 %s' % IPv4Address)
+        else:
+            print('没有 %s' % IPv4Address)
+
+    def load_ip(self):
+        """加载IP"""
+        try:
+            with open(self.filename, 'r', encoding='utf-8') as f:
+                self.ip_dict = json.load(f)
+            print('读取 [%s] 文件完成...' % self.filename)
+
+        except FileNotFoundError:
+            with open(self.filename, 'w', encoding='utf-8') as f:
+                pass
+            print('新建文件 [%s]' % self.filename)
+
+        except JSONDecodeError:
+            print('[%s] 文件为空，加载失败' % self.filename)
+
+    def save_ip(self):
+        """保存IP"""
+        with open(self.filename, "w", encoding='utf-8') as f:
+            json.dump(self.ip_dict, f)
+        print("保存 [%s] 文件完成..." % self.filename)

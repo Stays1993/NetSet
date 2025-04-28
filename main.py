@@ -3,7 +3,7 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-from function import NetManage
+from function import NetManage, IPList
 from ui import Window
 
 
@@ -25,15 +25,26 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     window = Window()
-    net = NetManage(window=window)
+    net = NetManage()
     net.get_network_adapters()
 
     adapter_names = [adapter["Name"] for adapter in net.adapters]
     window.adapter_combobox.addItems(adapter_names)
-    window.adapter_combobox.currentTextChanged.connect(lambda: net.get_optimized(window.adapter_combobox.currentText()))
+    window.adapter_combobox.currentTextChanged.connect(
+        lambda: window.update_ip_ui(net.get_optimized(window.adapter_combobox.currentText())))
     adapter = adapter_names[0]
 
-    net.get_optimized(adapter)
+    window.update_ip_ui(net.get_optimized(adapter))
+
+    # IP列表
+    iplist = IPList()
+    window.ip_list.addItems(iplist.ip_dict)
+    window.ip_list.currentTextChanged.connect(
+        lambda: window.update_ip_ui(iplist.view_ip(window.ip_list.currentItem().text())))
+
+    # 查看IP
+    window.adapter_button.clicked.connect(
+        lambda: window.update_ip_ui(net.get_optimized(window.adapter_combobox.currentText())))
 
     window.show()
     sys.exit(app.exec())
