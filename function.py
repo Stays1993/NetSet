@@ -2,8 +2,6 @@ import json
 import subprocess
 from json import JSONDecodeError
 
-from PyQt6.QtGui import QStandardItemModel, QStandardItem
-
 from tools import subnet_converter
 
 
@@ -30,8 +28,9 @@ class NetManage:
         """
         try:
             # 构建PowerShell命令字符串（注意开头的空格避免命令拼接错误）
-            command = (" Get-NetAdapter"
+            command = ("Get-NetAdapter"
                        "| Where-Object { $_.Status -eq 'up' } "  # 过滤状态为up的适配器
+                       "| Where-Object { $_.InterfaceAlias -notlike 'Tailscale'}"
                        "| Select-Object Name, InterfaceIndex, InterfaceAlias, InterfaceDescription "
                        "| ConvertTo-Json")
 
@@ -85,18 +84,18 @@ class NetManage:
         command = '''
             $name = '%s'
             $config = Get-NetIPAddress -InterfaceAlias $name -AddressFamily IPv4
-            $gateway = Get-NetRoute -InterfaceAlias 'WLAN' | Where-Object DestinationPrefix -eq '0.0.0.0/0'
+            $gateway = Get-NetRoute -InterfaceAlias $name | Where-Object DestinationPrefix -eq '0.0.0.0/0'
             $dns = Get-DnsClientServerAddress -InterfaceAlias $name -AddressFamily IPv4
             $dhcp = Get-NetIPInterface -InterfaceAlias $name -AddressFamily IPv4 | 
                 Select-Object @{Name='DHCP'; Expression={ if ($_.Dhcp -eq 1) { 'Enabled' } else { 'Disabled' } }}
 
             [PSCustomObject]@{
-                InterfaceAlias = $config.InterfaceAlias
-                IPv4Address = $config.IPAddress
-                IPv4DefaultGateway = $gateway.NextHop
-                SubnetMask = $config.PrefixLength
+                InterfaceAlias = $config[0].InterfaceAlias
+                IPv4Address = $config[0].IPAddress
+                IPv4DefaultGateway = $gateway[0].NextHop
+                SubnetMask = $config[0].PrefixLength
                 DNSServer = $dns.ServerAddresses
-                DHCPEnabled = $dhcp.Dhcp
+                DHCPEnabled = $dhcp[0].Dhcp
             } | ConvertTo-Json
         ''' % Name
 
@@ -119,6 +118,7 @@ class NetManage:
                 return '', '', '', (), ''
 
             # 使用walrus运算符简化代码
+            print(output.get('SubnetMask'))
             if (mask := output.get('SubnetMask')) is not None:
                 SubnetMask = subnet_converter(cidr=mask)
             else:
@@ -146,7 +146,7 @@ class NetManage:
                                  -PrefixLength '{subnet_converter(subnet_mask=var[1])}' -DefaultGateway '{var[2]}'
                 Set-DnsClientServerAddress -InterfaceIndex $interface.ifIndex -ServerAddresses {var[3]}
                 '''
-
+        print(command)
         # 设置 startupinfo 隐藏控制台窗口
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
@@ -250,8 +250,11 @@ class IPList:
                               'IPv4DefaultGateway': IPv4DefaultGateway, 'DNSServer': DNSServer}}
         self.ip_dict.update(temp)
 
-    def update_ip(self):
-        """更新IP"""
+
+    def change_ip(self, IPv4Address: str, var: tuple[str, str, str, tuple]):
+        """修改IP"""
+        self.del_ip(IPv4Address)
+        self.add_ip(var[0],var[1],var[2],var[3])
 
     def view_ip(self, IPv4Address: str):
         """查看IP"""
@@ -262,20 +265,22 @@ class IPList:
             SubnetMask: str = ip_data.get('SubnetMask', '')
             IPv4DefaultGateway: str = ip_data.get('IPv4DefaultGateway', '')
             DNSServer: tuple[str] = ip_data.get('DNSServer', ())
-            DHCPEnabled = ""
+            DHCPEnable: str = ''
 
-            return IPv4Address, SubnetMask, IPv4DefaultGateway, DNSServer, DHCPEnabled
+            return IPv4Address, SubnetMask, IPv4DefaultGateway, DNSServer, DHCPEnable
         else:
             print('没有 %s' % IPv4Address)
-            return "", "", "", ()
+            return "", "", "", (), ''
 
     def del_ip(self, IPv4Address: str):
         """删除IP"""
         if self.ip_dict.get(IPv4Address):
-            self.ip_dict.pop(IPv4Address)
+            temp = self.ip_dict.pop(IPv4Address)
             print('已删除 %s' % IPv4Address)
+            return temp
         else:
             print('没有 %s' % IPv4Address)
+            return None
 
     def load_ip(self):
         """加载IP"""
@@ -283,6 +288,7 @@ class IPList:
             with open(self.filename, 'r', encoding='utf-8') as f:
                 self.ip_dict = json.load(f)
             print('读取 [%s] 文件完成...' % self.filename)
+            print('读取到 [%d] 条数据。' % len(self.ip_dict))
 
         except FileNotFoundError:
             with open(self.filename, 'w', encoding='utf-8'):
@@ -297,3 +303,4 @@ class IPList:
         with open(self.filename, "w", encoding='utf-8') as f:
             json.dump(self.ip_dict, f)
         print("保存 [%s] 文件完成..." % self.filename)
+        print('已保存 [%d] 条数据。' % len(self.ip_dict))

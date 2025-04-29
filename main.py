@@ -37,7 +37,7 @@ if __name__ == "__main__":
     # IP列表
     iplist = IPList()
 
-    window.ip_list_view.addItems(iplist.ip_dict)
+    window.ip_list_view.addItems(iplist.ip_dict.keys())
     # window.ip_list_view.currentTextChanged.connect(
     #     lambda: window.update_ip_ui(iplist.view_ip(window.ip_list_view.currentItem().text())))
 
